@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  STAFF
+}
+
+enum Sport {
+  FOOTBALL
+  VOLLEYBALL
+  TENNIS
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  NO_SHOW
+  COMPLETED
+}
+
+enum BookingSource {
+  ONLINE
+  MANUAL
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+}
+
+/// Un establecimiento (el cliente que paga la suscripción). Es el "inquilino" de todo lo demás.
+model Establishment {
+  id                  String   @id @default(uuid())
+  slug                String   @unique
+  name                String
+  city                String   @default("Yopal")
+  phone               String?
+  timezone            String   @default("America/Bogota")
+  paymentInstructions String?
+  createdAt           DateTime @default(now())
+
+  users     User[]
+  courts    Court[]
+  hours     OpeningHour[]
+  customers Customer[]
+  bookings  Booking[]
+  payments  Payment[]
+}
+
+model User {
+  id                String    @id @default(uuid())
+  establishmentId   String
+  name              String
+  email             String    @unique
+  passwordHash      String
+  role              Role      @default(STAFF)
+  active            Boolean   @default(true)
+  recoveryCodeHash  String?
+  passwordChangedAt DateTime?
+  createdAt         DateTime  @default(now())
+
+  establishment Establishment @relation(fields: [establishmentId], references: [id])
+  payments      Payment[]
+
+  @@index([establishmentId])
+}
+
+/// Horario de atención por día de la semana (0 = domingo ... 6 = sábado), en minutos desde la medianoche.
+/// Si un día no tiene fila, ese día está cerrado.
+model OpeningHour {
+  id              String @id @default(uuid())
+  establishmentId String
+  weekday         Int
+  opensMin        Int
+  closesMin       Int
+
+  establishment Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@unique([establishmentId, weekday])
+}
+
+model Court {
+  id               String  @id @default(uuid())
+  establishmentId  String
+  name             String
+  sport            Sport
+  surface          String?
+  slotMinutes      Int     @default(60)
+  active           Boolean @default(true)
+  allowDeposit     Boolean @default(true)
+  depositAmount    Int?
+  allowFullPayment Boolean @default(true)
+  sortOrder        Int     @default(0)
+  createdAt        DateTime @default(now())
+
+  establishment Establishment @relation(fields: [establishmentId], references: [id])
+  priceRules    PriceRule[]
+  bookings      Booking[]
+
+  @@unique([establishmentId, name])
+  @@unique([id, establishmentId])
+  @@index([establishmentId])
+}
+
+/// Tarifa por hora de una cancha en una franja (por ejemplo, noche entre semana).
+model PriceRule {
+  id           String @id @default(uuid())
+  courtId      String
+  weekdays     Int[]
+  startMin     Int
+  endMin       Int
+  pricePerHour Int
+
+  court Court @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@index([courtId])
+}
+
+/// Quien reserva. No tiene cuenta: se identifica por su teléfono dentro de cada establecimiento.
+model Customer {
+  id              String   @id @default(uuid())
+  establishmentId String
+  name            String
+  phone           String
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  establishment Establishment @relation(fields: [establishmentId], references: [id])
+  bookings      Booking[]
+
+  @@unique([establishmentId, phone])
+  @@unique([id, establishmentId])
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  establishmentId String
+  courtId         String
+  customerId      String
+  startsAt        DateTime      @db.Timestamptz(3)
+  endsAt          DateTime      @db.Timestamptz(3)
+  status          BookingStatus @default(PENDING)
+  source          BookingSource @default(ONLINE)
+  /// Precio total en pesos, fijado al reservar: cambiar una tarifa después no altera reservas viejas.
+  price           Int
+  note            String?
+  /// Para vencer reservas "por confirmar" que nadie atiende.
+  expiresAt       DateTime?     @db.Timestamptz(3)
+  confirmedAt     DateTime?     @db.Timestamptz(3)
+  cancelledAt     DateTime?     @db.Timestamptz(3)
+  cancelReason    String?
+  /// Enlace privado para que el jugador vea o cancele su reserva sin tener cuenta.
+  publicToken     String        @unique @default(uuid())
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+
+  establishment Establishment @relation(fields: [establishmentId], references: [id])
+  court         Court         @relation(fields: [courtId, establishmentId], references: [id, establishmentId])
+  customer      Customer      @relation(fields: [customerId, establishmentId], references: [id, establishmentId])
+  payments      Payment[]
+
+  @@unique([id, establishmentId])
+  @@index([establishmentId, startsAt])
+  @@index([courtId, startsAt])
+  @@index([customerId])
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  establishmentId String
+  bookingId       String
+  amount          Int
+  method          PaymentMethod
+  note            String?
+  recordedById    String
+  voidedAt        DateTime?
+  voidReason      String?
+  createdAt       DateTime      @default(now())
+
+  establishment Establishment @relation(fields: [establishmentId], references: [id])
+  booking       Booking       @relation(fields: [bookingId, establishmentId], references: [id, establishmentId])
+  recordedBy    User          @relation(fields: [recordedById], references: [id])
+
+  @@index([bookingId])
+}
