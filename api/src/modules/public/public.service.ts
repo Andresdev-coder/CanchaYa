@@ -5,11 +5,10 @@ import type { Booking, Court, Establishment } from "../../generated/prisma/clien
 import { AppError } from "../../middlewares/errorHandler";
 import { formatTime } from "../../utils/time";
 import { slotsFor } from "../bookings/availability";
-import { checkBookableDate, dateIn } from "../bookings/slots";
+import { findOrCreateCustomer } from "../bookings/customers";
+import { reserveSlot } from "../bookings/reserve";
+import { checkBookableDate } from "../bookings/slots";
 import { createPublicBookingSchema } from "./public.schemas";
-
-const isUnique = (err: unknown) =>
-  typeof err === "object" && err !== null && "code" in err && err.code === "P2002";
 
 async function findEstablishment(slug: string) {
   const establishment = await prisma.establishment.findUnique({ where: { slug } });
@@ -71,18 +70,6 @@ export async function availability(slug: string, courtId: string, date: string, 
   };
 }
 
-async function findOrCreateCustomer(establishmentId: string, name: string, phone: string) {
-  const where = { establishmentId_phone: { establishmentId, phone } };
-  const existing = await prisma.customer.findUnique({ where });
-  if (existing) return existing; // se respeta el nombre que ya tiene
-  try {
-    return await prisma.customer.create({ data: { establishmentId, name, phone } });
-  } catch (err) {
-    if (isUnique(err)) return prisma.customer.findUniqueOrThrow({ where }); // otra petición lo creó a la vez
-    throw err;
-  }
-}
-
 function countActive(customerId: string, now: Date) {
   return prisma.booking.count({
     where: {
@@ -92,20 +79,6 @@ function countActive(customerId: string, now: Date) {
       OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
     },
   });
-}
-
-function isTaken(courtId: string, start: Date, end: Date, now: Date) {
-  return prisma.booking
-    .count({
-      where: {
-        courtId,
-        status: { in: ["PENDING", "CONFIRMED"] },
-        startsAt: { lt: end },
-        endsAt: { gt: start },
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-      },
-    })
-    .then((n) => n > 0);
 }
 
 function toDto(booking: Booking, court: Court, establishment: Establishment) {
@@ -144,55 +117,28 @@ export async function createBooking(
     throw new AppError(400, "Esta cancha no recibe el pago total por adelantado");
   }
 
-  // El turno se valida contra el que calcula el servidor: no se confía en la hora ni en el precio del cliente.
-  const start = new Date(input.start);
-  const date = dateIn(establishment.timezone, start);
-  const dateError = checkBookableDate(date, establishment.timezone, BOOKING.maxAdvanceDays, now);
-  if (dateError) throw new AppError(400, dateError);
-
-  const slot = (await slotsFor(establishment, court, date, now)).find((s) => s.start.getTime() === start.getTime());
-  if (!slot) throw new AppError(400, "Ese horario no existe o ya pasó");
-  if (!slot.available) throw new AppError(409, "Ese horario ya fue reservado");
-
-  const known = await prisma.customer.findUnique({
-    where: { establishmentId_phone: { establishmentId: establishment.id, phone: input.phone } },
+  const booking = await reserveSlot({
+    establishment,
+    court,
+    start: new Date(input.start),
+    status: "PENDING",
+    source: "ONLINE",
+    paymentChoice: input.paymentChoice,
+    note: input.note,
+    now,
+    getCustomer: async () => {
+      const known = await prisma.customer.findUnique({
+        where: { establishmentId_phone: { establishmentId: establishment.id, phone: input.phone } },
+      });
+      if (known && (await countActive(known.id, now)) >= BOOKING.maxActivePerPhone) {
+        throw new AppError(
+          409,
+          `Ya tienes ${BOOKING.maxActivePerPhone} reservas activas. Espera a que las confirmen o cancélalas.`,
+        );
+      }
+      return known ?? (await findOrCreateCustomer(establishment.id, input.name, input.phone));
+    },
   });
-  if (known && (await countActive(known.id, now)) >= BOOKING.maxActivePerPhone) {
-    throw new AppError(409, `Ya tienes ${BOOKING.maxActivePerPhone} reservas activas. Espera a que las confirmen o cancélalas.`);
-  }
-  const customer = known ?? (await findOrCreateCustomer(establishment.id, input.name, input.phone));
 
-  const expiresAt = new Date(Math.min(now.getTime() + BOOKING.holdHours * 3_600_000, slot.start.getTime()));
-
-  try {
-    const booking = await prisma.$transaction(async (tx) => {
-      // Libera las reservas "por confirmar" vencidas de esta cancha, que si no seguirían bloqueando el horario.
-      await tx.booking.updateMany({
-        where: { courtId: court.id, status: "PENDING", expiresAt: { lte: now } },
-        data: { status: "CANCELLED", cancelledAt: now, cancelReason: "Venció sin confirmar" },
-      });
-      return tx.booking.create({
-        data: {
-          establishmentId: establishment.id,
-          courtId: court.id,
-          customerId: customer.id,
-          startsAt: slot.start,
-          endsAt: slot.end,
-          status: "PENDING",
-          source: "ONLINE",
-          price: slot.price,
-          paymentChoice: input.paymentChoice,
-          note: input.note,
-          expiresAt,
-        },
-      });
-    });
-    return toDto(booking, court, establishment);
-  } catch (err) {
-    // Si dos personas pidieron el mismo turno a la vez, la base de datos rechazó a la segunda.
-    if (await isTaken(court.id, slot.start, slot.end, now)) {
-      throw new AppError(409, "Ese horario acaba de ser reservado por otra persona");
-    }
-    throw err;
-  }
+  return toDto(booking, court, establishment);
 }

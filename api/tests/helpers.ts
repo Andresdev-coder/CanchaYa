@@ -138,3 +138,12 @@ export const bookOnline = (slug: string, body: object) =>
   request(app)
     .post(`/public/${slug}/bookings`)
     .send({ name: "Jugador de prueba", phone: `310${String(1_000_000 + ++phoneSeq).slice(-7)}`, ...body });
+
+/** Reserva como jugador un turno y devuelve la reserva creada. */
+export async function reserveOnline(owner: Tenant, courtId: string, date: string, time: string, body: object = {}) {
+  const slot = await slotAt(owner.slug, courtId, date, time);
+  return ok(await bookOnline(owner.slug, { courtId, start: slot.start, ...body })) as {
+    id: string;
+    [key: string]: any;
+  };
+}

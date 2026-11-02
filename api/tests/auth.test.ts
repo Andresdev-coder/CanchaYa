@@ -36,6 +36,11 @@ describe("auth", () => {
     expect(tenant.slug.startsWith("admin-")).toBe(true);
   });
 
+    it("no entrega la dirección reservada 'bookings'", async () => {
+    const tenant = await registerTenant("Bookings");
+    expect(tenant.slug.startsWith("bookings-")).toBe(true);
+  });
+  
   it("rechaza un correo repetido (409)", async () => {
     const owner = newOwner();
     await request(app).post("/auth/register").send(owner);

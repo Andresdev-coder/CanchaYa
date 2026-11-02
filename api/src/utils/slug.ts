@@ -13,4 +13,6 @@ export function slugify(text: string) {
 }
 
 /** Direcciones que no se pueden dar a un establecimiento porque serán rutas de la aplicación. */
-export const RESERVED_SLUGS = new Set(["admin", "api", "app", "r", "ingresar", "registro", "precios", "login", "health"]);
+export const RESERVED_SLUGS = new Set([
+  "admin", "api", "app", "r", "ingresar", "registro", "precios", "login", "health", "bookings", "reservas",
+]);
