@@ -37,6 +37,12 @@ enum PaymentMethod {
   TRANSFER
 }
 
+enum PaymentChoice {
+  AT_COURT
+  DEPOSIT
+  FULL
+}
+
 /// Un establecimiento (el cliente que paga la suscripción). Es el "inquilino" de todo lo demás.
 model Establishment {
   id                  String   @id @default(uuid())
@@ -150,6 +156,7 @@ model Booking {
   endsAt          DateTime      @db.Timestamptz(3)
   status          BookingStatus @default(PENDING)
   source          BookingSource @default(ONLINE)
+  paymentChoice   PaymentChoice @default(AT_COURT)
   /// Precio total en pesos, fijado al reservar: cambiar una tarifa después no altera reservas viejas.
   price           Int
   note            String?
