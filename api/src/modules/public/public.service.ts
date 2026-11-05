@@ -9,6 +9,8 @@ import { findOrCreateCustomer } from "../bookings/customers";
 import { reserveSlot } from "../bookings/reserve";
 import { checkBookableDate } from "../bookings/slots";
 import { createPublicBookingSchema } from "./public.schemas";
+import type { Payment } from "../../generated/prisma/client";
+import { summarize } from "../bookings/payment-summary";
 
 async function findEstablishment(slug: string) {
   const establishment = await prisma.establishment.findUnique({ where: { slug } });
@@ -141,4 +143,75 @@ export async function createBooking(
   });
 
   return toDto(booking, court, establishment);
+}
+
+type PlayerRow = Booking & { court: Court; establishment: Establishment; payments: Payment[] };
+
+const playerInclude = { court: true, establishment: true, payments: true } as const;
+
+function toPlayerDto(b: PlayerRow, now: Date) {
+  const { paid, balance, paymentStatus } = summarize(b.price, b.payments);
+  const active = b.status === "PENDING" || b.status === "CONFIRMED";
+  const deposit = b.court.depositAmount === null ? 0 : Math.min(b.court.depositAmount, b.price);
+  const target = b.paymentChoice === "FULL" ? b.price : b.paymentChoice === "DEPOSIT" ? deposit : 0;
+  const amountDue = active ? Math.max(target - paid, 0) : 0;
+
+  return {
+    status: b.status,
+    paymentChoice: b.paymentChoice,
+    price: b.price,
+    paid,
+    balance,
+    paymentStatus,
+    amountDue,
+    start: b.startsAt.toISOString(),
+    end: b.endsAt.toISOString(),
+    expiresAt: b.expiresAt?.toISOString() ?? null,
+    cancelReason: b.cancelReason,
+    court: { name: b.court.name, sport: b.court.sport },
+    establishment: { slug: b.establishment.slug, name: b.establishment.name, phone: b.establishment.phone },
+    // Solo se muestran mientras falte algo por pagar por adelantado.
+    paymentInstructions: amountDue > 0 ? b.establishment.paymentInstructions : null,
+    canCancel: active && b.startsAt > now && paid === 0,
+  };
+}
+
+export async function getByToken(token: string, now = new Date()) {
+  // Si la reserva estaba "por confirmar" y ya venció, se cancela al abrirla.
+  await prisma.booking.updateMany({
+    where: { publicToken: token, status: "PENDING", expiresAt: { lte: now } },
+    data: { status: "CANCELLED", cancelledAt: now, cancelReason: "Venció sin confirmar" },
+  });
+
+  const booking = await prisma.booking.findUnique({ where: { publicToken: token }, include: playerInclude });
+  if (!booking) throw new AppError(404, "Reserva no encontrada");
+  return toPlayerDto(booking, now);
+}
+
+export async function cancelByToken(token: string, now = new Date()) {
+  // Una sola actualización con todas las condiciones: así no se cancela algo que cambió justo antes.
+  const result = await prisma.booking.updateMany({
+    where: {
+      publicToken: token,
+      status: { in: ["PENDING", "CONFIRMED"] },
+      startsAt: { gt: now },
+      payments: { none: { voidedAt: null } },
+    },
+    data: { status: "CANCELLED", cancelledAt: now, cancelReason: "Cancelada por el jugador" },
+  });
+
+  const booking = await prisma.booking.findUnique({ where: { publicToken: token }, include: playerInclude });
+  if (!booking) throw new AppError(404, "Reserva no encontrada");
+
+  if (result.count === 0) {
+    if (booking.status !== "PENDING" && booking.status !== "CONFIRMED") {
+      throw new AppError(409, "Esta reserva ya no se puede cancelar");
+    }
+    if (booking.startsAt <= now) throw new AppError(409, "El turno ya empezó");
+    throw new AppError(
+      409,
+      "Ya hay pagos registrados en esta reserva. Comunícate con el establecimiento para cancelarla.",
+    );
+  }
+  return toPlayerDto(booking, now);
 }

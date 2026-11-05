@@ -23,3 +23,5 @@ export const createPublicBookingSchema = z.object({
   paymentChoice: z.enum(["AT_COURT", "DEPOSIT", "FULL"]).default("AT_COURT"),
   note: z.string().trim().max(200).optional(),
 });
+
+export const tokenParam = z.string().uuid("Enlace inválido");
