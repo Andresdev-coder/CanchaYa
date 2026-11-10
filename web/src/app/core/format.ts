@@ -55,9 +55,13 @@ export function formatLongDate(iso: string) {
 }
 
 export function formatClock(iso: string) {
-  return new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: TZ }).format(
-    new Date(iso),
-  );
+  const time = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: TZ,
+  }).format(new Date(iso));
+  return to12h(time);
 }
 
 export function normalizePhone(value: string) {

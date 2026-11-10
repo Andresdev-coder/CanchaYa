@@ -73,6 +73,13 @@ describe('BookingLink', () => {
     expect(text()).not.toContain('Guarda este enlace');
   });
 
+  it('si el jugador la canceló, se lo dice con claridad', async () => {
+    const { text } = await setup(
+      booking({ status: 'CANCELLED', canCancel: false, cancelReason: 'Cancelada por el jugador' }),
+    );
+    expect(text()).toContain('Cancelaste esta reserva');
+  });
+
   it('un enlace desconocido muestra que no se encontró', async () => {
     const { text } = await setup(404);
     expect(text()).toContain('No encontramos tu reserva');

@@ -51,11 +51,11 @@ type SlotsState =
           }
 
           <h2 class="label">Fecha</h2>
-          <div class="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-1">
+          <div class="grid grid-cols-7 gap-1.5">
             @for (d of days; track d.value) {
               <button
                 type="button"
-                class="chip h-16 w-14 shrink-0 px-0 leading-tight"
+                class="chip h-16 px-0 leading-tight"
                 [attr.aria-pressed]="d.value === date()"
                 (click)="chooseDate(d.value)"
               >

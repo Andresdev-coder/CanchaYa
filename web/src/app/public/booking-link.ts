@@ -167,8 +167,11 @@ export class BookingLink {
       case 'CONFIRMED':
         return `Te esperamos en ${b.establishment.name}.`;
       case 'CANCELLED':
-        return b.cancelReason === 'Venció sin confirmar'
-          ? 'Venció porque el establecimiento no alcanzó a confirmarla.'
+        if (b.cancelReason === 'Venció sin confirmar') {
+          return 'Venció porque el establecimiento no alcanzó a confirmarla.';
+        }
+        return b.cancelReason === 'Cancelada por el jugador'
+          ? 'Cancelaste esta reserva. El horario quedó libre.'
           : 'Esta reserva ya no está activa.';
       default:
         return b.establishment.name;

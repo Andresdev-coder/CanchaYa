@@ -15,7 +15,9 @@ describe('formato', () => {
   });
 
   it('muestra la hora de Bogotá, no la del navegador', () => {
-    expect(plain(formatClock('2026-10-30T00:00:00.000Z')).toLowerCase()).toMatch(/^7:00 p\. ?m\.$/);
+    expect(formatClock('2026-10-30T00:00:00.000Z')).toBe('7:00 pm');
+    expect(formatClock('2026-10-29T12:30:00.000Z')).toBe('7:30 am');
+    expect(formatClock('2026-10-30T05:00:00.000Z')).toBe('12:00 am');
   });
 
   it('suma días sin saltarse el cambio de mes ni de año', () => {
