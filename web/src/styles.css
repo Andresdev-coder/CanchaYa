@@ -10,6 +10,8 @@
   --color-muted: #53635b;
   --color-taken: #e6eae3;
   --color-danger: #a12b2b;
+  --color-soft: #edf0e8;
+  --color-lime-soft: #e4f59b;
 }
 
 @layer base {

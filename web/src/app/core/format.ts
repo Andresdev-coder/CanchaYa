@@ -101,3 +101,36 @@ export function to12h(time: string) {
 export function capitalize(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/** Minutos desde la medianoche, en hora de Colombia, de un instante. */
+export function minutesOfDay(iso: string) {
+  const time = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: TZ,
+  }).format(new Date(iso));
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+/** "06:30" -> 390. "24:00" -> 1440. */
+export function timeToMin(time: string) {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+/** Día de la semana de una fecha AAAA-MM-DD (0 = domingo). */
+export function weekdayOf(date: string) {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
+/** "2026-10-29" -> "Jueves 29 de octubre". */
+export function formatDayTitle(date: string) {
+  return capitalize(
+    new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(
+      new Date(`${date}T00:00:00Z`),
+    ),
+  );
+}
