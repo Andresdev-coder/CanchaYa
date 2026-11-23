@@ -42,6 +42,9 @@
   .btn-outline {
     @apply min-h-12 w-full cursor-pointer rounded-2xl border-[1.5px] border-ink px-4 text-base font-extrabold text-ink;
   }
+  .btn-back {
+    @apply min-h-11 w-full cursor-pointer text-sm font-bold text-muted underline;
+  }
   .btn-text {
     @apply min-h-11 w-full cursor-pointer text-sm font-bold text-danger;
   }

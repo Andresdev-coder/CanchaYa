@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { Subject, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 import { friendlyError } from '../core/api';
 import { AuthService } from '../core/auth';
@@ -53,7 +54,7 @@ interface LoadResult {
 
 @Component({
   selector: 'app-agenda',
-  imports: [BookingDetail, ManualBooking],
+  imports: [BookingDetail, ManualBooking, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="p-4 lg:p-8">
@@ -72,7 +73,7 @@ interface LoadResult {
       </div>
 
       <div class="mt-5 flex flex-wrap gap-x-9 gap-y-2 border-y border-line py-3.5">
-        <p><b class="text-2xl">{{ stats().total }}</b><span class="ml-1.5 text-muted">reservas</span></p>
+        <p><b class="text-2xl">{{ stats().total }}</b><span class="ml-1.5 text-muted">{{ stats().total === 1 ? 'reserva' : 'reservas' }}</span></p>
         <p><b class="text-2xl">{{ stats().pending }}</b><span class="ml-1.5 text-muted">por confirmar</span></p>
         <p><b class="text-2xl">{{ cop(stats().collected) }}</b><span class="ml-1.5 text-muted">cobrado</span></p>
         <p><b class="text-2xl">{{ cop(stats().toCollect) }}</b><span class="ml-1.5 text-muted">por cobrar en cancha</span></p>
@@ -85,7 +86,13 @@ interface LoadResult {
       @if (loading()) {
         <p class="py-16 text-center text-muted" aria-live="polite">Cargando la agenda…</p>
       } @else if (columns().length === 0) {
-        <p class="mt-6 rounded-2xl bg-white p-6 text-muted">Todavía no hay canchas configuradas.</p>
+        <div class="mt-6 rounded-2xl bg-white p-6">
+          <p class="font-extrabold">Todavía no hay canchas configuradas</p>
+          <p class="mt-1 text-muted">Para recibir reservas necesitas tu horario de atención y al menos una cancha con tarifas.</p>
+          @if (isOwner()) {
+            <a routerLink="/app/canchas" class="btn-primary mt-4 inline-grid max-w-xs place-items-center">Configurar mis canchas</a>
+          }
+        </div>
       } @else {
         <div class="mt-4 mb-3 flex flex-wrap gap-5 text-xs text-muted">
           <span class="flex items-center gap-1.5"><i class="size-3.5 rounded border-[1.5px] border-dashed border-muted"></i>Por confirmar</span>
@@ -103,7 +110,8 @@ interface LoadResult {
           <div class="hidden overflow-x-auto lg:block">
             <div
               class="grid gap-x-1.5"
-              [style.grid-template-columns]="'64px repeat(' + columns().length + ', minmax(140px, 1fr))'"
+              [style.max-width]="'calc(64px + ' + columns().length + ' * 360px)'"
+              [style.grid-template-columns]="'64px repeat(' + columns().length + ', minmax(150px, 1fr))'"
               [style.grid-template-rows]="'auto repeat(' + rows() + ', 32px)'"
             >
               @for (c of columns(); track c.id; let i = $index) {

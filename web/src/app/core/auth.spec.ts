@@ -6,7 +6,7 @@ import type { ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree } from '@angu
 import { firstValueFrom, isObservable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth';
-import { authGuard, guestGuard } from './guards';
+import { authGuard, guestGuard, ownerGuard } from './guards';
 import type { Me } from './models';
 import { session } from './session';
 
@@ -120,5 +120,19 @@ describe('guardas de las rutas', () => {
   it('ingresar y registrarse están abiertas para quien no tiene sesión', async () => {
     setup();
     expect(await runGuard(guestGuard)).toBe(true);
+  });
+
+  it('la configuración deja pasar al dueño', async () => {
+    const { auth } = setup();
+    auth.me.set(me);
+    expect(await runGuard(ownerGuard)).toBe(true);
+  });
+
+  it('la configuración manda a la agenda al empleado', async () => {
+    const { auth } = setup();
+    auth.me.set({ ...me, user: { ...me.user, role: 'STAFF' } });
+    const result = await runGuard(ownerGuard);
+    expect(result).not.toBe(true);
+    expect((result as UrlTree).toString()).toBe('/app');
   });
 });

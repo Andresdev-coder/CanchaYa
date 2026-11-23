@@ -82,7 +82,7 @@ type Mode = 'none' | 'pay' | 'cancel' | 'void';
               <label class="block text-sm font-bold" for="note">Nota (opcional)</label>
               <input id="note" class="field" [value]="note()" (input)="onInput(note, $event)" />
               <button type="submit" class="btn-primary" [disabled]="busy() || !amountOk()">Guardar pago</button>
-              <button type="button" class="btn-text" (click)="back()">Volver</button>
+              <button type="button" class="btn-back" (click)="back()">Volver</button>
             </form>
           }
           @case ('cancel') {
@@ -90,7 +90,7 @@ type Mode = 'none' | 'pay' | 'cancel' | 'void';
               <label class="block text-sm font-bold" for="reason">Motivo (opcional)</label>
               <input id="reason" class="field" [value]="reason()" (input)="onInput(reason, $event)" />
               <button type="submit" class="btn-primary" [disabled]="busy()">Confirmar cancelación</button>
-              <button type="button" class="btn-text" (click)="back()">Volver</button>
+              <button type="button" class="btn-back" (click)="back()">Volver</button>
             </form>
           }
           @case ('void') {
@@ -98,7 +98,7 @@ type Mode = 'none' | 'pay' | 'cancel' | 'void';
               <label class="block text-sm font-bold" for="voidReason">Motivo de la anulación</label>
               <input id="voidReason" class="field" [value]="reason()" (input)="onInput(reason, $event)" />
               <button type="submit" class="btn-primary" [disabled]="busy() || reason().trim().length < 3">Anular pago</button>
-              <button type="button" class="btn-text" (click)="back()">Volver</button>
+              <button type="button" class="btn-back" (click)="back()">Volver</button>
             </form>
           }
           @default {

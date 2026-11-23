@@ -15,17 +15,19 @@ import { AuthService } from '../core/auth';
         <button type="button" class="min-h-11 px-2 text-sm font-bold text-[#c9d4cc]" (click)="auth.logout()">Cerrar sesión</button>
       </header>
 
+      <nav class="flex gap-1 overflow-x-auto bg-ink px-3 pb-3 lg:hidden" aria-label="Secciones">
+        @for (item of nav(); track item.path) {
+          <a [routerLink]="item.path" routerLinkActive="bg-lime text-ink" class="shrink-0 rounded-xl px-3 py-2 text-sm font-bold text-[#c9d4cc]">{{ item.label }}</a>
+        }
+      </nav>
+
       <aside class="hidden w-60 shrink-0 flex-col bg-ink p-4 text-[#c9d4cc] lg:flex">
         <p class="mx-2 mb-8 text-xl font-extrabold text-white">Cancha<span class="ml-0.5 rounded-md bg-lime px-1 text-ink">Ya</span></p>
 
         <nav class="flex flex-col gap-1">
-          <a
-            routerLink="/app/agenda"
-            routerLinkActive="bg-lime text-ink"
-            class="rounded-xl px-3 py-2.5 font-bold"
-          >
-            Agenda
-          </a>
+          @for (item of nav(); track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="bg-lime text-ink" class="rounded-xl px-3 py-2.5 font-bold">{{ item.label }}</a>
+          }
         </nav>
 
         <div class="mt-auto space-y-3">
@@ -55,6 +57,14 @@ import { AuthService } from '../core/auth';
 export class Shell {
   protected readonly auth = inject(AuthService);
   protected readonly copied = signal(false);
+
+  protected readonly nav = computed(() => {
+    const items = [{ path: '/app/agenda', label: 'Agenda' }];
+    if (this.auth.isOwner()) {
+      items.push({ path: '/app/canchas', label: 'Canchas y precios' }, { path: '/app/establecimiento', label: 'Mi establecimiento' });
+    }
+    return items;
+  });
 
   protected readonly publicUrl = computed(() => {
     const slug = this.auth.establishment()?.slug ?? '';

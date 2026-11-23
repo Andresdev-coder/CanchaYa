@@ -18,3 +18,10 @@ export const guestGuard: CanActivateFn = () => {
     .restore()
     .pipe(map((ok) => (ok ? router.createUrlTree(['/app']) : true)));
 };
+
+/** La configuración del establecimiento es solo del dueño: el empleado vuelve a la agenda. */
+export const ownerGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.restore().pipe(map(() => auth.isOwner() || router.createUrlTree(['/app'])));
+};

@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import type { LoginResponse, Me, RegisterBody, RegisterResponse } from './models';
+import type { Establishment, LoginResponse, Me, RegisterBody, RegisterResponse } from './models';
 import { session } from './session';
 
 @Injectable({ providedIn: 'root' })
@@ -44,6 +44,11 @@ export class AuthService {
         return of(false);
       }),
     );
+  }
+
+  /** Después de editar los datos del establecimiento, se actualiza lo que muestra la aplicación. */
+  setEstablishment(establishment: Establishment) {
+    this.me.update((m) => (m ? { ...m, establishment } : m));
   }
 
   logout() {

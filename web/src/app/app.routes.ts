@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/guards';
+import { authGuard, guestGuard, ownerGuard } from './core/guards';
 import { Home } from './home/home';
 import { NotFound } from './home/not-found';
 import { BookingLink } from './public/booking-link';
@@ -32,6 +32,19 @@ export const routes: Routes = [
         path: 'agenda',
         loadComponent: () => import('./owner/agenda').then((m) => m.Agenda),
         title: 'Agenda · CanchaYa',
+      },
+      // La configuración es solo del dueño.
+      {
+        path: 'canchas',
+        canActivate: [ownerGuard],
+        loadComponent: () => import('./owner/courts').then((m) => m.Courts),
+        title: 'Canchas y precios · CanchaYa',
+      },
+      {
+        path: 'establecimiento',
+        canActivate: [ownerGuard],
+        loadComponent: () => import('./owner/settings').then((m) => m.Settings),
+        title: 'Mi establecimiento · CanchaYa',
       },
     ],
   },

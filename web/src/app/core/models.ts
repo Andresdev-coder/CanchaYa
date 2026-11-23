@@ -188,3 +188,30 @@ export interface PaymentBody {
   method: PaymentMethod;
   note?: string;
 }
+
+// ---- Configuración del establecimiento ----
+
+export interface PriceRule {
+  id?: string;
+  weekdays: number[];
+  start: string;
+  end: string;
+  pricePerHour: number;
+}
+
+export interface CourtBody {
+  name: string;
+  sport: Sport;
+  surface: string | null;
+  slotMinutes: number;
+  allowDeposit: boolean;
+  depositAmount: number | null;
+  allowFullPayment: boolean;
+  active?: boolean;
+}
+
+export interface EstablishmentPatch {
+  name?: string;
+  phone?: string | null;
+  paymentInstructions?: string | null;
+}

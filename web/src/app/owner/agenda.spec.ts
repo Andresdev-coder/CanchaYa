@@ -82,6 +82,22 @@ describe('Agenda', () => {
     expect(text).toContain('Cancha 1');
   });
 
+  it('una sola reserva se escribe en singular', async () => {
+    const { el } = await setup({ bookings: [booking()] });
+    expect(el.textContent).toMatch(/1\s*reserva(?!s)/);
+  });
+
+  it('sin canchas, el dueño ve el enlace para configurarlas y el empleado no', async () => {
+    const owner = await setup({ courts: [] });
+    expect(owner.el.querySelector('a[href="/app/canchas"]')).toBeTruthy();
+    TestBed.resetTestingModule();
+
+    const staff = await setup({ courts: [] });
+    TestBed.inject(AuthService).me.update((m) => (m ? { ...m, user: { ...m.user, role: 'STAFF' } } : m));
+    await staff.fixture.whenStable();
+    expect(staff.el.querySelector('a[href="/app/canchas"]')).toBeNull();
+  });
+
   it('sin canchas configuradas lo dice y no deja crear reservas', async () => {
     const { el } = await setup({ courts: [] });
     expect(el.textContent).toContain('Todavía no hay canchas configuradas');
