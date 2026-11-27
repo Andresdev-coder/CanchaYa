@@ -8,7 +8,7 @@ import type { User } from "../../generated/prisma/client";
 import { AppError } from "../../middlewares/errorHandler";
 import { RESERVED_SLUGS, slugify } from "../../utils/slug";
 import { publicEstablishment } from "../establishments/establishments.service";
-import { loginSchema, registerSchema } from "./auth.schemas";
+import { changePasswordSchema, loginSchema, registerSchema } from "./auth.schemas";
 
 function signToken(user: Pick<User, "id" | "establishmentId" | "role">) {
   return jwt.sign({ establishmentId: user.establishmentId, role: user.role }, env.JWT_SECRET, {
@@ -91,4 +91,23 @@ export async function me(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { establishment: true } });
   if (!user) throw new AppError(404, "Usuario no encontrado");
   return { user: publicUser(user), establishment: publicEstablishment(user.establishment) };
+}
+
+/** Cambia la contraseña de quien tiene la sesión abierta. Las sesiones anteriores dejan de servir y se entrega una nueva. */
+export async function changePassword(userId: string, input: z.infer<typeof changePasswordSchema>) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+  // 400 y no 401: un 401 le diría a la aplicación que la sesión venció y cerraría la sesión.
+  if (!(await bcrypt.compare(input.currentPassword, user.passwordHash))) {
+    throw new AppError(400, "La contraseña actual no es correcta");
+  }
+  if (input.currentPassword === input.newPassword) {
+    throw new AppError(400, "La contraseña nueva debe ser distinta de la actual");
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await bcrypt.hash(input.newPassword, 10), passwordChangedAt: new Date() },
+  });
+  return { token: signToken(updated) };
 }

@@ -6,11 +6,14 @@ import type {
   Establishment,
   EstablishmentPatch,
   ManualBookingBody,
+  MemberPatch,
+  NewMemberBody,
   OpeningHour,
   OwnerBooking,
   OwnerCourt,
   PaymentBody,
   PriceRule,
+  TeamMember,
 } from './models';
 
 /** Peticiones de la zona privada. El token lo agrega el interceptor. */
@@ -85,5 +88,22 @@ export class OwnerApi {
   /** Reemplaza todo el horario: un día que no se envía queda cerrado. */
   setHours(days: OpeningHour[]) {
     return this.http.put<OpeningHour[]>(`${this.base}/establishment/hours`, { days });
+  }
+
+  team() {
+    return this.http.get<TeamMember[]>(`${this.base}/users`);
+  }
+
+  createMember(body: NewMemberBody) {
+    return this.http.post<TeamMember>(`${this.base}/users`, body);
+  }
+
+  updateMember(id: string, patch: MemberPatch) {
+    return this.http.patch<TeamMember>(`${this.base}/users/${id}`, patch);
+  }
+
+  /** Cambia la contraseña de quien tiene la sesión abierta. Devuelve una sesión nueva: las anteriores dejan de servir. */
+  changePassword(currentPassword: string, newPassword: string) {
+    return this.http.post<{ token: string }>(`${this.base}/auth/change-password`, { currentPassword, newPassword });
   }
 }

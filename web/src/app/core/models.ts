@@ -215,3 +215,26 @@ export interface EstablishmentPatch {
   phone?: string | null;
   paymentInstructions?: string | null;
 }
+
+// ---- Equipo ----
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface NewMemberBody {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface MemberPatch {
+  name?: string;
+  active?: boolean;
+  password?: string;
+}

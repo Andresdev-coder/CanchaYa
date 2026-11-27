@@ -61,8 +61,13 @@ export class Shell {
   protected readonly nav = computed(() => {
     const items = [{ path: '/app/agenda', label: 'Agenda' }];
     if (this.auth.isOwner()) {
-      items.push({ path: '/app/canchas', label: 'Canchas y precios' }, { path: '/app/establecimiento', label: 'Mi establecimiento' });
+      items.push(
+        { path: '/app/canchas', label: 'Canchas y precios' },
+        { path: '/app/equipo', label: 'Equipo' },
+        { path: '/app/establecimiento', label: 'Mi establecimiento' },
+      );
     }
+    items.push({ path: '/app/cuenta', label: 'Mi cuenta' });
     return items;
   });
 

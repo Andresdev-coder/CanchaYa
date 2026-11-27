@@ -54,6 +54,9 @@ export function friendlyError(err: unknown): FriendlyError {
         fields: {},
       };
     }
+    if (err.status === 429 && !(err.error as ApiErrorBody | null)?.message) {
+      return { status: 429, message: 'Hiciste muchas solicitudes seguidas. Espera un momento e inténtalo de nuevo.', fields: {} };
+    }
     const body = err.error as ApiErrorBody | null;
     const fields: Record<string, string> = {};
     for (const e of body?.errors ?? []) fields[e.field] = e.message;

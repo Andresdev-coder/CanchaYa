@@ -41,10 +41,22 @@ export const routes: Routes = [
         title: 'Canchas y precios · CanchaYa',
       },
       {
+        path: 'equipo',
+        canActivate: [ownerGuard],
+        loadComponent: () => import('./owner/team').then((m) => m.Team),
+        title: 'Equipo · CanchaYa',
+      },
+      {
         path: 'establecimiento',
         canActivate: [ownerGuard],
         loadComponent: () => import('./owner/settings').then((m) => m.Settings),
         title: 'Mi establecimiento · CanchaYa',
+      },
+      // Cada persona cambia su propia contraseña.
+      {
+        path: 'cuenta',
+        loadComponent: () => import('./owner/account').then((m) => m.Account),
+        title: 'Mi cuenta · CanchaYa',
       },
     ],
   },
